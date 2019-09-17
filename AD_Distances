@@ -1,0 +1,73 @@
+#######################################
+# AD DISTANCES OBTAINED BY SIMULATION
+#######################################
+setwd("K:/Projectes_TQG/Llibre_FME/n400_1_4")
+
+# Initial parameters
+must=100
+sigmast=5
+ite = 1000000
+result = rep(NA,ite)
+size = 400
+mosaic = 49
+
+# Random generation function
+rsepd2=function(n,must=0,sigmast=1,alpha=0.5,p=2){
+  kp=1/(2*gamma(1+1/p)*p^(1/p))
+  u=runif(n)
+  w=rgamma(n,shape=1/p,scale=1)
+  y=ifelse(u>alpha,1-alpha,-alpha)*(w^(1/p))/gamma(1+1/p)
+  y=y/kp
+  must+sigmast*y
+}
+# Distribution function
+psepd2=function(x, must=0, sigmast=1, alpha=0.5, p=2){
+  x=(x-must)/sigmast
+  alpaux=ifelse(x<=0,alpha,1-alpha)
+  alpha+sign(x)*alpaux*ifelse(alpaux>0,pgamma(((abs(x)/(2*alpaux))^p)/p,shape=1/p),0)
+}
+
+equ=function(par,sam1=sam){
+  dif=par-sort(sam1)
+  xmen=sum((dif[dif>0])^(p-1))
+  xmas=sum((-dif[dif<0])^(p-1))
+  (1-alpha)^p*xmen-alpha^p*xmas
+}
+
+# AD distance function
+AD<-function (x, distr.fun, mu, sigma, alpha, p,...) 
+{
+  x <- sort(distr.fun(x, mu, sigma, alpha, p))
+  tmp <- x * (1 - rev(x))
+  tmp <- (2 * seq(x) - 1) * log(tmp+.Machine$double.eps)
+  tmp <- -mean(tmp) - length(x)
+}
+
+pb <- txtProgressBar(style=3)
+
+j=(log10(50)/log10(2))^(1/(mosaic/2-0.5))
+lp=c(1,2^(1/j^((mosaic/2-1.5):1)),2,2^(j^((1:(mosaic/2-0.5)))))
+la = seq(from=0, to=1, by=1/48)
+la[1] = 0.01
+for (a in 1:6) {
+  alpha = la[a]
+  for (j in 1:49) {
+    p=lp[j]
+    p = round(p,4)
+    alpha = round(alpha,4)
+    filename=paste0("Sam_Size_",size,"_p_",p,"_alpha_",alpha,"_Ite_",ite,".csv")
+    if (!file.exists(filename)){
+      for (i in 1:ite) {
+        x = rsepd2(size,must,sigmast,alpha,p)
+        must2=uniroot(equ,c(min(x),max(x)),tol=1e-16,sam=x)$root
+        dif=must2-sort(x)
+        xmen=sum((dif[dif>0])^p)/size
+        xmas=sum((-dif[dif<0])^p)/size
+        sigst2=((xmas/(1-alpha)^p+xmen/alpha^p))^(1/p)/2
+        result[i] = AD(x,psepd2, mu=must2, sigma=sigst2, alpha=alpha, p=p)
+      }
+      write.csv2(result,filename, row.names=FALSE)
+    }
+    setTxtProgressBar(pb, (j+(a-1)*49)/(4*49))
+  }
+}
