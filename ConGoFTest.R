@@ -1,7 +1,7 @@
 ################################################################
 #    Supplementary material that accompanies the article:      #
-# "Concurrent Goodness-of-fit Test for Unimodal Distributions" #
-#    Published in:                                             #
+#         "Goodness-of-fit-graphical-assessment for a          #
+#           broad family of unimodal distributions"            #
 ################################################################
 
 # The working directory have to be the same where the file CriticalValues.csv is
